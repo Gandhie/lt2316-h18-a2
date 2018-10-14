@@ -5,7 +5,7 @@
 import sys
 
 # This is evil, forgive me, but practical under the circumstances.
-# It's a hardcoded access to the COCO API.  
+# It's a hardcoded access to the COCO API.
 COCOAPI_PATH='/scratch/lt2316-h18-resources/cocoapi/PythonAPI/'
 TRAIN_ANNOT_FILE='/scratch/lt2316-h18-resources/coco/annotations/instances_train2017.json'
 VAL_ANNOT_FILE='/scratch/lt2316-h18-resources/coco/annotations/instances_val2017.json'
@@ -51,12 +51,12 @@ def setmode(mode):
     annotcoco = COCO(annotfile)
     capcoco = COCO(capfile)
 
-    
+
 def query(queries, exclusive=True):
     '''
-    Collects mutually-exclusive lists of COCO ids by queries, so returns 
+    Collects mutually-exclusive lists of COCO ids by queries, so returns
     a parallel list of lists.
-    (Setting 'exclusive' to False makes the lists non-exclusive.)  
+    (Setting 'exclusive' to False makes the lists non-exclusive.)
     e.g., exclusive_query([['toilet', 'boat'], ['umbrella', 'bench']])
     to find two mutually exclusive lists of images, one with toilets and
     boats, and the other with umbrellas and benches in the same image.
@@ -72,11 +72,11 @@ def query(queries, exclusive=True):
             return [list(y) for y in imgsets]
     else:
         return [list(imgsets[0])]
-    
+
 def iter_captions(idlists, cats, batch=1):
     '''
     Obtains the corresponding captions from multiple COCO id lists.
-    Randomizes the order.  
+    Randomizes the order.
     Returns an infinite iterator (do not convert to list!) that returns tuples (captions, categories)
     as parallel lists at size of batch.
     '''
@@ -89,7 +89,7 @@ def iter_captions(idlists, cats, batch=1):
     for z in zip(idlists, cats):
         for x in z[0]:
             full.append((x, z[1]))
-        
+
     while True:
         randomlist = random.sample(full, k=len(full))
         captions = []

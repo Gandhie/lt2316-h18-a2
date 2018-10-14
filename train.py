@@ -11,6 +11,11 @@ import mycoco
 # update the arguments as you need.
 def optA():
     mycoco.setmode('train')
+    ids = mycoco.query(args.categories, exclusive=True)
+    imgs = mycoco.iter_images(ids, args.categories)
+    for id in ids:
+        print(len(id))
+
     print("Option A not implemented!")
 
 # If you do option B, you may want to place your code here.  You can
@@ -21,7 +26,7 @@ def optB():
 
 # Modify this as needed.
 if __name__ == "__main__":
-    parser = ArgumentParser("Train a model.")    
+    parser = ArgumentParser("Train a model.")
     # Add your own options as flags HERE as necessary (and some will be necessary!).
     # You shouldn't touch the arguments below.
     parser.add_argument('-P', '--option', type=str,

@@ -21,7 +21,7 @@ def optB():
 
 # Modify this as needed.
 if __name__ == "__main__":
-    parser = ArgumentParser("Evaluate a model.")    
+    parser = ArgumentParser("Evaluate a model.")
     # Add your own options as flags HERE as necessary (and some will be necessary!).
     # You shouldn't touch the arguments below.
     parser.add_argument('-P', '--option', type=str,
