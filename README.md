@@ -7,4 +7,3 @@ of Language Technology programme.
 
 Place instructions for running your project here, as per the assignment
 description in GUL.
-

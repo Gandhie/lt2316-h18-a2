@@ -203,3 +203,43 @@ def iter_images(idlists, cats, size=(200,200), batch=1):
                     yield (np.array(images), np.array(labels))
                     images = []
                     labels = []
+
+def get_images_categories(idlists, cats, size=(200,200)):
+    '''Takes a while to run (5-10 mins), but seems to work.
+    '''
+    if not annotcoco:
+        raise ValueError
+    if not size:
+        raise ValueError # size is mandatory
+
+    full = []
+    for z in zip(idlists, cats):
+        for x in z[0]:
+            full.append((x, z[1]))
+
+        randomlist = random.sample(full, k=len(full))
+
+        images = []
+        labels = []
+        image_lst = []
+        label_lst = []
+
+        for r in randomlist:
+            imgfile = annotcoco.loadImgs([r[0]])[0]['file_name']
+            img = io.imread(imgdir + imgfile)
+            imgscaled = tform.resize(img, size)
+            # Colour images only.
+            if imgscaled.shape == (size[0], size[1], 3):
+                images.append(imgscaled)
+                labels.append(r[1])
+                image_lst.append(np.array(images))
+                label_lst.append(np.array(labels))
+                images = []
+                labels = []
+
+    return image_lst, label_lst
+
+def make_img_gen(data):
+    while True:
+        for i in data:
+            yield (i, i)
