@@ -9,6 +9,7 @@ import mycoco
 from keras.layers import Input, Conv2D, Dense, Activation, MaxPooling2D, Conv2DTranspose, UpSampling2D
 from keras import Model
 from keras.callbacks import ModelCheckpoint
+from keras import optimizers
 
 
 # If you do option A, you may want to place your code here.  You can
@@ -16,56 +17,66 @@ from keras.callbacks import ModelCheckpoint
 def optA():
     mycoco.setmode('train')
     ids = mycoco.query(args.categories, exclusive=True)
-    #imgs = mycoco.iter_images(ids, args.categories)
-    imgs, cats = mycoco.get_images_categories(ids, args.categories)
-    #for id in ids:
-        #print(len(id)) # test print
+    imgs = mycoco.iter_images_nocat(ids, args.categories, batch=32)
+    #img = next(imgs)
+    #print(img)
+
+    #imgs_lst, cats_lst = mycoco.get_images_categories(ids, args.categories)
+    num_imgs = 0
+    for id in ids:
+        num_imgs += len(id)
+    print(num_imgs)
+
+
     #print(imgs[0])
     #print(cats[0])
     #print(len(imgs), len(cats))
-    train_val_split = round(len(imgs) * 0.8)
-    train_imgs = imgs[:train_val_split]
-    val_imgs = imgs[train_val_split:]
+    #train_val_split = round(len(imgs) * 0.8)
+    #train_imgs = imgs[:train_val_split]
+    #val_imgs = imgs[train_val_split:]
 
-    train_imgs_gen = mycoco.make_img_gen(train_imgs)
-    val_imgs_gen = mycoco.make_img_gen(val_imgs)
+    #train_imgs_gen = mycoco.make_img_gen(train_imgs)
+    #val_imgs_gen = mycoco.make_img_gen(val_imgs)
+
 
     # input
     inputlayer = Input(shape=(200,200,3))
     # encoder
-    conv2dlayer = Conv2D(8, (3,3))(inputlayer)
+    encoded = Dense
+    conv2dlayer = Conv2D(8, (3,3), padding='same')(inputlayer)
     relulayer = Activation('relu')(conv2dlayer)
     maxpool2dlayer = MaxPooling2D(pool_size=(2,2))(relulayer)
-    conv2dlayer2 = Conv2D(16, (3,3))(maxpool2dlayer)
+    conv2dlayer2 = Conv2D(16, (3,3), padding='same')(maxpool2dlayer)
     relulayer2 = Activation('relu')(conv2dlayer2)
     maxpool2dlayer2 = MaxPooling2D(pool_size=(2,2))(relulayer2)
-    encoded = maxpool2dlayer2
+    encoded = maxpool2dlayer
     # decoder
-    upsamplinglayer = UpSampling2D((2,2))(maxpool2dlayer2)
-    conv2dtranslayer = Conv2DTranspose(16, (3,3))(upsamplinglayer)
+    conv2dtranslayer = Conv2DTranspose(16, (3,3), padding='same')(maxpool2dlayer2)
     relulayer3 = Activation('relu')(conv2dtranslayer)
-    upsamplinglayer2 = UpSampling2D((2,2))(relulayer3)
-    conv2dtranslayer2 = Conv2DTranspose(8, (3,3))(upsamplinglayer2)
+    upsamplinglayer = UpSampling2D((2,2))(relulayer3)
+    conv2dtranslayer2 = Conv2DTranspose(8, (3,3), padding='same')(upsamplinglayer)
     relulayer4 = Activation('relu')(conv2dtranslayer2)
-    conv2dtranslayer3 = Conv2DTranspose(3, (3,3), activation='sigmoid')(relulayer4)
+    upsamplinglayer2 = UpSampling2D((2,2))(relulayer4)
+    conv2dtranslayer3 = Conv2DTranspose(3, (3,3), activation='sigmoid', padding='same')(upsamplinglayer2)
     # had issues with the iter_images generator data, since it has both image and category - resulting in wrong shape for the above layer. - Fixed by making lists (imgs and cats separate) and then generators from lists. But really bad results...?
 
     #load_weights here? For checkpointing.
 
     model = Model(inputlayer, conv2dtranslayer3)
     model.summary()
-    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+    #adam = optimizers.Adam(lr=0.0001)
+    model.compile(optimizer='adam', loss='mean_squared_error', metrics=['accuracy'])
 
     # checkpoint
     filepath = '/scratch/gusastam/best.weights.h5' # change this to args.checkpointdir eventually. The arg should be almost the same as this line - add info about which model (we're saving 4 different ones).
-    checkpoint = ModelCheckpoint(filepath, monitor='val_acc', verbose=1, save_best_only=True, mode='max')
+    checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='min') # Checkpoint based on min loss maybe? But I won't get val_loss without validation data?
     callbacks_list = [checkpoint]
 
-    steps = len(train_imgs) / 32 # setting batch size but probably not right. How to set batch size and where?
-    valsteps = len(train_imgs) / 32
+    steps = round(num_imgs / 32)
+    #valsteps = len(train_imgs) / 32
 
-    model.fit_generator(train_imgs_gen, steps_per_epoch=steps, epochs=30, callbacks=callbacks_list, validation_data=(val_imgs_gen), validation_steps=valsteps)
-    #loss: 0.5066 - acc: 0.0116 - val_loss: 0.5044 - val_acc: 0.0170 = seems really bad.
+    model.fit_generator(imgs, steps_per_epoch=steps, epochs=30, callbacks=callbacks_list)
+    #loss: 0.5066 - acc: 0.0116 - val_loss: 0.5044 - val_acc: 0.0170 = seems really bad. But accuracy shouldn't make sense here anyway, because it is not a classification but an autoencoder. How about the loss though?
 
     #model.fit(train_imgs, train_imgs, epochs=3, callbacks=callbacks_list, validation_data=(val_imgs, val_imgs))
     """ ^
@@ -86,7 +97,7 @@ def optA():
     # Cluster the embeddings? How?
     # What is going in test.py?
     # Plot losses for all 4 models. How do we plot losses?
-    # Output of compression layer for each training image, reduce dimensionality with PCA to 2D or 3D. Colour-code by category (min 3 cats), and plot the vectors. 
+    # Output of compression layer for each training image, reduce dimensionality with PCA to 2D or 3D. Colour-code by category (min 3 cats), and plot the vectors.
 
 # If you do option B, you may want to place your code here.  You can
 # update the arguments as you need.

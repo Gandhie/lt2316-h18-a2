@@ -204,6 +204,43 @@ def iter_images(idlists, cats, size=(200,200), batch=1):
                     images = []
                     labels = []
 
+def iter_images_nocat(idlists, cats, size=(200,200), batch=1):
+    '''
+    Obtains the corresponding image data as numpy array from multiple COCO id lists.
+    Returns an infinite iterator (do not convert to list!) that returns tuples (imagess, categories)
+    as parallel lists at size of batch.
+    By default, randomizes the order and resizes the image.
+    '''
+    if not annotcoco:
+        raise ValueError
+    if batch < 1:
+        raise ValueError
+    if not size:
+        raise ValueError # size is mandatory
+
+    full = []
+    for z in zip(idlists, cats):
+        for x in z[0]:
+            full.append((x, z[1]))
+
+    while True:
+        randomlist = random.sample(full, k=len(full))
+
+        images = []
+        labels = []
+        for r in randomlist:
+            imgfile = annotcoco.loadImgs([r[0]])[0]['file_name']
+            img = io.imread(imgdir + imgfile)
+            imgscaled = tform.resize(img, size)
+            # Colour images only.
+            if imgscaled.shape == (size[0], size[1], 3):
+                images.append(imgscaled)
+                labels.append(r[1])
+                if len(images) % batch == 0:
+                    yield (np.array(images), np.array(images))
+                    images = []
+                    labels = []
+
 def get_images_categories(idlists, cats, size=(200,200)):
     '''Takes a while to run (5-10 mins), but seems to work.
     '''
