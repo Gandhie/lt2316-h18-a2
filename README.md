@@ -5,15 +5,15 @@ of Language Technology programme.
 
 ## Your notes
 **Running train.py:** python train.py -P 'A' *-m int* '/scratch/gusastam/' 'weights-filename' *-w 'str'* 'model-filename' 'cat1' 'cat2' 'cat3' ...
-\* Cursive shows that the argument is optional.
-\* In -m, 'int' is a placeholder for an integer of choice (for max instances per category).
-\* -w is a decision whether to load weights from checkpointed file or not, and which file ('str') to load from. Keep track of the file you want to load from (from a previous run), so that the categories are the same etc..
-\* 'model-filename' should be the filename + .json .
+<br/>\* Cursive shows that the argument is optional.
+<br/>\* In -m, 'int' is a placeholder for an integer of choice (for max instances per category).
+<br/>\* -w is a decision whether to load weights from checkpointed file or not, and which file ('str') to load from. Keep track of the file you want to load from (from a previous run), so that the categories are the same etc..
+<br/>\* 'model-filename' should be the filename + .json .
 
 **Running test.py:** python test.py -P 'A' *-m int* 'model-filename' 'cat1' 'cat2' 'cat3' ...
-\* Cursive shows that the argument is optional.
-\* In -m, 'int' is a placeholder for an integer of choice (for max instances per category).
-\* 'model-filename' should be the name of the model you want to load (as created by train.py).
+<br/>\* Cursive shows that the argument is optional.
+<br/>\* In -m, 'int' is a placeholder for an integer of choice (for max instances per category).
+<br/>\* 'model-filename' should be the name of the model you want to load (as created by train.py).
 
 **Description of Architecture:** This Autoencoder makes use of two Convolutional layers followed by ReLU activation and MaxPooling layers in the encoder. The decoder consists of two Deconvolutional layers followed by ReLU activation and Upsamling layers. At the very end, it has a Deconvolutional layer with Sigmoid activation which finalizes the recreation of the image. I built it this way based on a number of guides and tutorials I found online (credit in train.py), all of which seemed to following a somewhat similar pattern. As for batch size, I went with 32, which appears to be a very common one (even standard according to documentation), and the steps_per_epoch of the fit_generator is also based on that. I was initially using binary_crossentropy as my loss function, but since this left the loss constantly around 0.5, I ended up switching to MSE after asking Asad about it. The number of epochs was initially 30, but I lowered it in favour of being able to actually run the script to its end a few times. Each epoch takes more than a minute with only two categories to run.
 A diagram of the architecture is included in the repo.
