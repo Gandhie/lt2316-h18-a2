@@ -16,40 +16,35 @@ from keras import optimizers
 # update the arguments as you need.
 def optA():
     mycoco.setmode('train')
-    ids = mycoco.query(args.categories, exclusive=True)
-    imgs = mycoco.iter_images_nocat(ids, args.categories, batch=32)
-    #img = next(imgs)
-    #print(img)
+    # Checking if maxinstances.
+    if args.maxinstances != None:
+        idsstart = mycoco.query(args.categories, exclusive=True)
+        ids = []
+        for id in idsstart:
+            ids.append(list(id[:args.maxinstances]))
+    else:
+        ids = mycoco.query(args.categories, exclusive=True)
 
-    #imgs_lst, cats_lst = mycoco.get_images_categories(ids, args.categories)
+    # Gets image data (without labels).
+    imgs = mycoco.iter_images_nocat(ids, args.categories, batch=32)
+
+    # Counts number of ids as an approximate number of images for later steps_per_epoch.
+    # May vary somewhat due to potentially excluding any black and white images.
     num_imgs = 0
     for id in ids:
         num_imgs += len(id)
-    print(num_imgs)
 
-
-    #print(imgs[0])
-    #print(cats[0])
-    #print(len(imgs), len(cats))
-    #train_val_split = round(len(imgs) * 0.8)
-    #train_imgs = imgs[:train_val_split]
-    #val_imgs = imgs[train_val_split:]
-
-    #train_imgs_gen = mycoco.make_img_gen(train_imgs)
-    #val_imgs_gen = mycoco.make_img_gen(val_imgs)
-
-
+    # Model Architecture:
     # input
     inputlayer = Input(shape=(200,200,3))
     # encoder
-    encoded = Dense
     conv2dlayer = Conv2D(8, (3,3), padding='same')(inputlayer)
     relulayer = Activation('relu')(conv2dlayer)
     maxpool2dlayer = MaxPooling2D(pool_size=(2,2))(relulayer)
     conv2dlayer2 = Conv2D(16, (3,3), padding='same')(maxpool2dlayer)
     relulayer2 = Activation('relu')(conv2dlayer2)
     maxpool2dlayer2 = MaxPooling2D(pool_size=(2,2))(relulayer2)
-    encoded = maxpool2dlayer
+    encoded = maxpool2dlayer2
     # decoder
     conv2dtranslayer = Conv2DTranspose(16, (3,3), padding='same')(maxpool2dlayer2)
     relulayer3 = Activation('relu')(conv2dtranslayer)
@@ -58,46 +53,43 @@ def optA():
     relulayer4 = Activation('relu')(conv2dtranslayer2)
     upsamplinglayer2 = UpSampling2D((2,2))(relulayer4)
     conv2dtranslayer3 = Conv2DTranspose(3, (3,3), activation='sigmoid', padding='same')(upsamplinglayer2)
-    # had issues with the iter_images generator data, since it has both image and category - resulting in wrong shape for the above layer. - Fixed by making lists (imgs and cats separate) and then generators from lists. But really bad results...?
 
-    #load_weights here? For checkpointing.
-
+    # Creating model.
     model = Model(inputlayer, conv2dtranslayer3)
     model.summary()
-    #adam = optimizers.Adam(lr=0.0001)
+
+    # Loading checkpointed weights.
+    if args.loadweights != None:
+        print('Loading saved weights from file.')
+        model.load_weights(args.checkpointdir + args.loadweights)
+
+    # Compiling model.
     model.compile(optimizer='adam', loss='mean_squared_error', metrics=['accuracy'])
 
     # checkpoint
-    filepath = '/scratch/gusastam/best.weights.h5' # change this to args.checkpointdir eventually. The arg should be almost the same as this line - add info about which model (we're saving 4 different ones).
-    checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='min') # Checkpoint based on min loss maybe? But I won't get val_loss without validation data?
+    filepath = args.checkpointdir + args.chkpntfilename
+    checkpoint = ModelCheckpoint(filepath, monitor='loss', verbose=1, save_best_only=True, mode='min')
     callbacks_list = [checkpoint]
 
     steps = round(num_imgs / 32)
-    #valsteps = len(train_imgs) / 32
 
-    model.fit_generator(imgs, steps_per_epoch=steps, epochs=30, callbacks=callbacks_list)
-    #loss: 0.5066 - acc: 0.0116 - val_loss: 0.5044 - val_acc: 0.0170 = seems really bad. But accuracy shouldn't make sense here anyway, because it is not a classification but an autoencoder. How about the loss though?
+    model.fit_generator(imgs, steps_per_epoch=steps, epochs=5, callbacks=callbacks_list)
 
-    #model.fit(train_imgs, train_imgs, epochs=3, callbacks=callbacks_list, validation_data=(val_imgs, val_imgs))
-    """ ^
-    Error when feeding fit(...): the list of images (before making generators again...)
-    model.fit(train_imgs, train_imgs, epochs=3, callbacks=callbacks_list, validation_data=(val_imgs, val_imgs))
+    # Saving model.
+    print("Saving model to file.")
+    filename = args.modelfile
+    model_json = model.to_json()
+    with open(filename, "w") as model_file:
+        model_file.write(model_json)
 
-    ValueError: Error when checking model input: the list of Numpy arrays that you are passing to your model is not the size the model expected. Expected to see 1 array(s), but instead got the following list of 5158 arrays: [array([[[[0.87530637, 0.86354167, 0.84393382],
-         [0.87132353, 0.8620098 , 0.84240196],
-         [0.85943627, 0.85551471, 0.83590686],
-         ...,
-         [0.23768382, 0.21905637, 0.17689951...
-    """
-
-    print("Option A not fully implemented!")
-
-    # What now?
-    # Get access to the embeddings (see PIM from Asad and Demo 4 examples.)
-    # Cluster the embeddings? How?
-    # What is going in test.py?
-    # Plot losses for all 4 models. How do we plot losses?
-    # Output of compression layer for each training image, reduce dimensionality with PCA to 2D or 3D. Colour-code by category (min 3 cats), and plot the vectors.
+'''
+Credit to:
+The Keras Blog - https://blog.keras.io/building-autoencoders-in-keras.html
+Machinelearningmastery.com - https://machinelearningmastery.com/save-load-keras-deep-learning-models/
+https://machinelearningmastery.com/check-point-deep-learning-models-keras/
+Tanmay Bakshi on YouTube - https://www.youtube.com/watch?v=6Lfra0Tym4M&feature=youtu.be
+for inspiration and help with building my autoencoder, checkpointing, and saving/loading models in Keras.
+'''
 
 # If you do option B, you may want to place your code here.  You can
 # update the arguments as you need.
@@ -118,6 +110,11 @@ if __name__ == "__main__":
                         required=False)
     parser.add_argument('checkpointdir', type=str,
                         help="directory for storing checkpointed models and other metadata (recommended to create a directory under /scratch/)")
+    parser.add_argument('chkpntfilename', type=str,
+                        help="filename for checkpointed model to be stored.")
+    parser.add_argument('-w', '--loadweights', type=str,
+                        help='Loads weights from the checkpointed file (str).',
+                        required=False)
     parser.add_argument('modelfile', type=str, help="output model file")
     parser.add_argument('categories', metavar='cat', type=str, nargs='+',
                         help='two or more COCO category labels')
